@@ -1,0 +1,62 @@
+services:
+  mysql:
+    container_name: ps82-mysql
+    image: mysql:8.0
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: admin
+      MYSQL_DATABASE: prestashop
+    volumes:
+      - ./db_data:/var/lib/mysql
+    networks:
+      - proxy-network
+
+  prestashop:
+    container_name: ps82-site
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+      args:
+        - INSTALL_XDEBUG=1
+    restart: unless-stopped
+    depends_on:
+      - mysql
+    ports:
+      - 8070:80
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      DB_SERVER: mysql
+      DB_NAME: prestashop
+      DB_USER: root
+      DB_PASSWD: admin
+      PS_INSTALL_AUTO: 1
+      PS_DOMAIN: mydomain.com
+      PS_LANGUAGE: it
+      PS_COUNTRY: IT
+      PS_FOLDER_ADMIN: admin_shop
+    volumes:
+      - ./prestashop:/var/www/html:rw
+    networks:
+      - proxy-network
+
+  phpmyadmin:
+    container_name: ps82-phpmyadmin
+    image: phpmyadmin/phpmyadmin
+    restart: unless-stopped
+    depends_on:
+      - mysql
+    ports:
+      - 8071:80
+    environment:
+      PMA_HOST: mysql
+      PMA_PORT: 3306
+      PMA_ARBITRARY: 1
+      PMA_USER: root
+      PMA_PASSWORD: admin
+    networks:
+      - proxy-network
+
+networks:
+  proxy-network:
+    external: true
